@@ -3,49 +3,185 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema Transporte Escolar</title>
+    <title>Sistema Transporte Escolar - Completo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="bg-gray-100">
-    <div class="container mx-auto p-6">
-        <h1 class="text-3xl font-bold text-center mb-8 text-blue-600">🚌 Sistema Transporte Escolar</h1>
-        
-        <!-- Formulário de Login -->
-        <div id="login-section" class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-lg">
-            <h2 class="text-xl mb-4 font-bold">Login</h2>
+    <!-- Header -->
+    <header class="bg-blue-600 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">🚌 Sistema Transporte Escolar</h1>
+            <div id="user-info" class="hidden">
+                <span id="user-email" class="mr-4"></span>
+                <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded">Sair</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Login Section -->
+    <div id="login-section" class="container mx-auto p-6">
+        <div class="max-w-md mx-auto bg-white p-8 rounded-lg shadow-lg mt-10">
+            <h2 class="text-2xl font-bold text-center mb-6">Login do Sistema</h2>
             <input type="email" id="email" placeholder="Email" class="w-full p-3 border rounded mb-4">
             <input type="password" id="password" placeholder="Senha" class="w-full p-3 border rounded mb-4">
             <button onclick="login()" class="w-full bg-blue-500 hover:bg-blue-600 text-white p-3 rounded font-bold">Entrar</button>
-            <button onclick="testeConexao()" class="w-full bg-gray-500 hover:bg-gray-600 text-white p-2 rounded mt-2">Teste (Remover depois)</button>
+        </div>
+    </div>
+
+    <!-- Dashboard Principal -->
+    <div id="dashboard" class="hidden container mx-auto p-6">
+        <!-- Menu de Navegação -->
+        <nav class="bg-white rounded-lg shadow-lg mb-6 p-4">
+            <div class="flex flex-wrap gap-4 justify-center">
+                <button onclick="showSection('alunos')" class="nav-btn bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
+                    <i class="fas fa-user-graduate mr-2"></i>Alunos
+                </button>
+                <button onclick="showSection('motoristas')" class="nav-btn bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                    <i class="fas fa-user-tie mr-2"></i>Motoristas
+                </button>
+                <button onclick="showSection('rotas')" class="nav-btn bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded">
+                    <i class="fas fa-route mr-2"></i>Rotas
+                </button>
+                <button onclick="showSection('financeiro')" class="nav-btn bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded">
+                    <i class="fas fa-dollar-sign mr-2"></i>Financeiro
+                </button>
+                <button onclick="showSection('relatorios')" class="nav-btn bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">
+                    <i class="fas fa-chart-bar mr-2"></i>Relatórios
+                </button>
+            </div>
+        </nav>
+
+        <!-- Dashboard Cards -->
+        <div id="dashboard-home" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <div class="bg-white p-6 rounded-lg shadow-lg text-center">
+                <i class="fas fa-user-graduate text-3xl text-green-500 mb-2"></i>
+                <h3 class="text-lg font-bold">Total de Alunos</h3>
+                <p class="text-2xl font-bold text-blue-600" id="total-alunos-dash">0</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-lg text-center">
+                <i class="fas fa-user-tie text-3xl text-blue-500 mb-2"></i>
+                <h3 class="text-lg font-bold">Motoristas Ativos</h3>
+                <p class="text-2xl font-bold text-green-600" id="total-motoristas-dash">0</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-lg text-center">
+                <i class="fas fa-route text-3xl text-purple-500 mb-2"></i>
+                <h3 class="text-lg font-bold">Rotas Ativas</h3>
+                <p class="text-2xl font-bold text-purple-600" id="total-rotas-dash">0</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-lg text-center">
+                <i class="fas fa-dollar-sign text-3xl text-yellow-500 mb-2"></i>
+                <h3 class="text-lg font-bold">Receita Mensal</h3>
+                <p class="text-2xl font-bold text-green-600" id="receita-mensal-dash">R$ 0</p>
+            </div>
         </div>
 
-        <!-- Dashboard Principal -->
-        <div id="dashboard" class="hidden">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Cadastrar Aluno -->
+        <!-- Seção Alunos -->
+        <div id="section-alunos" class="section hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Cadastro de Alunos -->
                 <div class="bg-white p-6 rounded-lg shadow-lg">
-                    <h3 class="text-lg font-bold mb-4 text-green-600">👦 Cadastrar Aluno</h3>
-                    <input type="text" id="nome-aluno" placeholder="Nome do Aluno" class="w-full p-2 border rounded mb-2">
-                    <input type="text" id="endereco-aluno" placeholder="Endereço" class="w-full p-2 border rounded mb-2">
-                    <input type="text" id="escola-aluno" placeholder="Escola" class="w-full p-2 border rounded mb-4">
-                    <button onclick="cadastrarAluno()" class="w-full bg-green-500 hover:bg-green-600 text-white p-2 rounded font-bold">Cadastrar</button>
+                    <h3 class="text-xl font-bold mb-4 text-green-600"><i class="fas fa-user-plus mr-2"></i>Cadastrar Aluno</h3>
+                    <input type="text" id="nome-aluno" placeholder="Nome do Aluno" class="w-full p-3 border rounded mb-3">
+                    <input type="text" id="endereco-aluno" placeholder="Endereço Completo" class="w-full p-3 border rounded mb-3">
+                    <input type="text" id="escola-aluno" placeholder="Escola" class="w-full p-3 border rounded mb-3">
+                    <input type="text" id="telefone-responsavel" placeholder="Telefone do Responsável" class="w-full p-3 border rounded mb-3">
+                    <input type="number" id="valor-mensalidade" placeholder="Valor da Mensalidade" step="0.01" class="w-full p-3 border rounded mb-4">
+                    <button onclick="cadastrarAluno()" class="w-full bg-green-500 hover:bg-green-600 text-white p-3 rounded font-bold">
+                        <i class="fas fa-save mr-2"></i>Cadastrar Aluno
+                    </button>
                 </div>
 
-                <!-- Listar Alunos -->
+                <!-- Lista de Alunos -->
                 <div class="bg-white p-6 rounded-lg shadow-lg">
-                    <h3 class="text-lg font-bold mb-4 text-purple-600">📋 Lista de Alunos</h3>
-                    <button onclick="listarAlunos()" class="w-full bg-purple-500 hover:bg-purple-600 text-white p-2 rounded font-bold mb-4">Carregar Lista</button>
-                    <div id="lista-alunos" class="text-sm"></div>
+                    <h3 class="text-xl font-bold mb-4 text-purple-600"><i class="fas fa-list mr-2"></i>Lista de Alunos</h3>
+                    <input type="text" id="buscar-aluno" placeholder="🔍 Buscar aluno..." class="w-full p-3 border rounded mb-4" oninput="buscarAlunos()">
+                    <div id="lista-alunos" class="max-h-96 overflow-y-auto"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção Motoristas -->
+        <div id="section-motoristas" class="section hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Cadastro de Motoristas -->
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-bold mb-4 text-blue-600"><i class="fas fa-user-plus mr-2"></i>Cadastrar Motorista</h3>
+                    <input type="text" id="nome-motorista" placeholder="Nome do Motorista" class="w-full p-3 border rounded mb-3">
+                    <input type="text" id="telefone-motorista" placeholder="Telefone" class="w-full p-3 border rounded mb-3">
+                    <input type="text" id="cnh-motorista" placeholder="Número da CNH" class="w-full p-3 border rounded mb-3">
+                    <input type="date" id="vencimento-cnh" class="w-full p-3 border rounded mb-3">
+                    <input type="text" id="endereco-motorista" placeholder="Endereço" class="w-full p-3 border rounded mb-4">
+                    <button onclick="cadastrarMotorista()" class="w-full bg-blue-500 hover:bg-blue-600 text-white p-3 rounded font-bold">
+                        <i class="fas fa-save mr-2"></i>Cadastrar Motorista
+                    </button>
                 </div>
 
-                <!-- Estatísticas -->
+                <!-- Lista de Motoristas -->
                 <div class="bg-white p-6 rounded-lg shadow-lg">
-                    <h3 class="text-lg font-bold mb-4 text-orange-600">📊 Estatísticas</h3>
-                    <div class="text-center">
-                        <p class="text-2xl font-bold text-blue-500" id="total-alunos">0</p>
-                        <p class="text-gray-600">Total de Alunos</p>
-                    </div>
+                    <h3 class="text-xl font-bold mb-4 text-blue-600"><i class="fas fa-list mr-2"></i>Lista de Motoristas</h3>
+                    <div id="lista-motoristas" class="max-h-96 overflow-y-auto"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção Rotas -->
+        <div id="section-rotas" class="section hidden">
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h3 class="text-xl font-bold mb-4 text-purple-600"><i class="fas fa-route mr-2"></i>Gestão de Rotas</h3>
+                <p class="text-gray-600">Funcionalidade em desenvolvimento - Google Maps API</p>
+            </div>
+        </div>
+
+        <!-- Seção Financeiro -->
+        <div id="section-financeiro" class="section hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Gerar Mensalidades -->
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-bold mb-4 text-yellow-600"><i class="fas fa-file-invoice-dollar mr-2"></i>Gerar Mensalidades</h3>
+                    <select id="mes-referencia" class="w-full p-3 border rounded mb-3">
+                        <option value="">Selecione o Mês</option>
+                        <option value="2025-01">Janeiro 2025</option>
+                        <option value="2025-02">Fevereiro 2025</option>
+                        <option value="2025-03">Março 2025</option>
+                        <option value="2025-04">Abril 2025</option>
+                        <option value="2025-05">Maio 2025</option>
+                        <option value="2025-06">Junho 2025</option>
+                        <option value="2025-07">Julho 2025</option>
+                        <option value="2025-08">Agosto 2025</option>
+                        <option value="2025-09">Setembro 2025</option>
+                        <option value="2025-10">Outubro 2025</option>
+                        <option value="2025-11">Novembro 2025</option>
+                        <option value="2025-12">Dezembro 2025</option>
+                    </select>
+                    <button onclick="gerarMensalidades()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white p-3 rounded font-bold">
+                        <i class="fas fa-plus mr-2"></i>Gerar Mensalidades
+                    </button>
+                </div>
+
+                <!-- Lista de Mensalidades -->
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-xl font-bold mb-4 text-green-600"><i class="fas fa-list mr-2"></i>Mensalidades</h3>
+                    <div id="lista-mensalidades" class="max-h-96 overflow-y-auto"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção Relatórios -->
+        <div id="section-relatorios" class="section hidden">
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h3 class="text-xl font-bold mb-4 text-red-600"><i class="fas fa-chart-bar mr-2"></i>Relatórios</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <button onclick="relatorioAlunos()" class="bg-green-500 hover:bg-green-600 text-white p-4 rounded">
+                        <i class="fas fa-file-pdf mr-2"></i>Relatório de Alunos
+                    </button>
+                    <button onclick="relatorioFinanceiro()" class="bg-yellow-500 hover:bg-yellow-600 text-white p-4 rounded">
+                        <i class="fas fa-file-excel mr-2"></i>Relatório Financeiro
+                    </button>
+                    <button onclick="relatorioInadimplentes()" class="bg-red-500 hover:bg-red-600 text-white p-4 rounded">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>Inadimplentes
+                    </button>
                 </div>
             </div>
         </div>
