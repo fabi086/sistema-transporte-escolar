@@ -6,23 +6,33 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabase = window.supabase.createClient(supabaseUrl, supabaseKey)
 let currentUser = null
 
-console.log('🚌 Sistema carregado! Testando conexão...')
+console.log('🚌 Sistema carregado!')
 
 // ===============================
-// SISTEMA DE NOTIFICAÇÕES SIMPLES
+// FUNÇÃO AUXILIAR SEGURA
 // ===============================
-function showNotification(message, type = 'info') {
-    alert(message) // Por enquanto, vamos usar alert simples
+function setElementText(id, text) {
+    const element = document.getElementById(id)
+    if (element) {
+        element.textContent = text
+    } else {
+        console.warn(`Elemento ${id} não encontrado`)
+    }
+}
+
+function getElementValue(id) {
+    const element = document.getElementById(id)
+    return element ? element.value.trim() : ''
 }
 
 // ===============================
 // LOGIN
 // ===============================
 async function login() {
-    const email = document.getElementById('email').value
-    const password = document.getElementById('password').value
+    const email = getElementValue('email')
+    const password = getElementValue('password')
     
-    console.log('Tentando login com:', email)
+    console.log('Login attempt:', email)
     
     if (!email || !password) {
         alert('❌ Preencha email e senha!')
@@ -37,62 +47,86 @@ async function login() {
         
         if (error) {
             alert('❌ Erro no login: ' + error.message)
-            console.error('Erro login:', error)
+            console.error('Login error:', error)
         } else {
             currentUser = data.user
-            document.getElementById('user-email').textContent = data.user.email
-            document.getElementById('login-section').classList.add('hidden')
-            document.getElementById('dashboard').classList.remove('hidden')
-            document.getElementById('user-info').classList.remove('hidden')
+            setElementText('user-email', data.user.email)
+            
+            // Mostrar/esconder seções
+            const loginSection = document.getElementById('login-section')
+            const dashboard = document.getElementById('dashboard')
+            const userInfo = document.getElementById('user-info')
+            
+            if (loginSection) loginSection.classList.add('hidden')
+            if (dashboard) dashboard.classList.remove('hidden')
+            if (userInfo) userInfo.classList.remove('hidden')
             
             alert('✅ Login realizado com sucesso!')
             showSection('home')
-            loadDashboard()
         }
     } catch (error) {
         alert('❌ Erro: ' + error.message)
-        console.error('Erro:', error)
+        console.error('Login error:', error)
     }
 }
 
 async function logout() {
-    await supabase.auth.signOut()
-    currentUser = null
-    document.getElementById('login-section').classList.remove('hidden')
-    document.getElementById('dashboard').classList.add('hidden')
-    document.getElementById('user-info').classList.add('hidden')
-    
-    document.getElementById('email').value = ''
-    document.getElementById('password').value = ''
+    try {
+        await supabase.auth.signOut()
+        currentUser = null
+        
+        const loginSection = document.getElementById('login-section')
+        const dashboard = document.getElementById('dashboard')
+        const userInfo = document.getElementById('user-info')
+        
+        if (loginSection) loginSection.classList.remove('hidden')
+        if (dashboard) dashboard.classList.add('hidden')
+        if (userInfo) userInfo.classList.add('hidden')
+        
+        const emailInput = document.getElementById('email')
+        const passwordInput = document.getElementById('password')
+        if (emailInput) emailInput.value = ''
+        if (passwordInput) passwordInput.value = ''
+        
+        alert('Logout realizado!')
+    } catch (error) {
+        console.error('Logout error:', error)
+    }
 }
 
 // ===============================
 // NAVEGAÇÃO
 // ===============================
 function showSection(section) {
-    console.log('Mostrando seção:', section)
+    console.log('Showing section:', section)
     
-    // Remover classe active de todos os botões
+    // Remover active de todos os botões
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('active')
     })
     
     // Esconder todas as seções
-    const sections = document.querySelectorAll('.section')
-    sections.forEach(s => s.classList.add('hidden'))
+    document.querySelectorAll('.section').forEach(s => {
+        s.classList.add('hidden')
+    })
     
     const dashboardHome = document.getElementById('dashboard-home')
     
     if (section === 'home') {
-        dashboardHome.classList.remove('hidden')
+        if (dashboardHome) dashboardHome.classList.remove('hidden')
         loadDashboard()
-        document.querySelector('button[onclick="showSection(\'home\')"]')?.classList.add('active')
+        
+        const homeBtn = document.querySelector('button[onclick="showSection(\'home\')"]')
+        if (homeBtn) homeBtn.classList.add('active')
     } else {
-        dashboardHome.classList.add('hidden')
+        if (dashboardHome) dashboardHome.classList.add('hidden')
+        
         const targetSection = document.getElementById(`section-${section}`)
         if (targetSection) {
             targetSection.classList.remove('hidden')
-            document.querySelector(`button[onclick="showSection('${section}')"]`)?.classList.add('active')
+            
+            const sectionBtn = document.querySelector(`button[onclick="showSection('${section}')"]`)
+            if (sectionBtn) sectionBtn.classList.add('active')
             
             // Carregar dados específicos
             switch(section) {
@@ -109,10 +143,11 @@ function showSection(section) {
                     listarMensalidades()
                     break
                 case 'ocorrencias':
-                    carregarAlunosOcorrencia()
                     listarOcorrencias()
                     break
             }
+        } else {
+            console.warn(`Seção ${section} não encontrada`)
         }
     }
 }
@@ -121,7 +156,8 @@ function showSection(section) {
 // DASHBOARD
 // ===============================
 async function loadDashboard() {
-    console.log('Carregando dashboard...')
+    console.log('Loading dashboard...')
+    
     try {
         // Total de alunos
         const { data: alunos, error } = await supabase
@@ -129,36 +165,43 @@ async function loadDashboard() {
             .select('*')
             .eq('status', 'ativo')
         
-        if (error) {
-            console.error('Erro ao buscar alunos:', error)
+        if (!error && alunos) {
+            setElementText('total-alunos-dash', alunos.length)
+            console.log('Total alunos:', alunos.length)
         } else {
-            document.getElementById('total-alunos-dash').textContent = alunos?.length || 0
-            console.log('Total alunos:', alunos?.length || 0)
+            console.error('Erro ao buscar alunos:', error)
+            setElementText('total-alunos-dash', '0')
         }
         
-        // Outros números do dashboard
-        document.getElementById('presentes-hoje-dash').textContent = '0'
-        document.getElementById('total-motoristas-dash').textContent = '0' 
-        document.getElementById('receita-mensal-dash').textContent = 'R$ 0'
+        // Dados padrão para outros cards
+        setElementText('presentes-hoje-dash', '0')
+        setElementText('total-motoristas-dash', '0')
+        setElementText('receita-mensal-dash', 'R$ 0')
         
     } catch (error) {
-        console.error('Erro dashboard:', error)
+        console.error('Dashboard error:', error)
+        setElementText('total-alunos-dash', '0')
+        setElementText('presentes-hoje-dash', '0')
+        setElementText('total-motoristas-dash', '0')
+        setElementText('receita-mensal-dash', 'R$ 0')
     }
 }
 
 // ===============================
-// CADASTRAR ALUNO SIMPLIFICADO
+// GESTÃO DE ALUNOS
 // ===============================
 async function cadastrarAluno() {
     console.log('Cadastrando aluno...')
     
-    const nome = document.getElementById('nome-aluno')?.value?.trim()
-    const escola = document.getElementById('escola-aluno')?.value?.trim()
-    const responsavel = document.getElementById('nome-responsavel')?.value?.trim()
-    const telefone = document.getElementById('telefone-responsavel')?.value?.trim()
-    const embarque = document.getElementById('local-embarque')?.value?.trim()
+    const nome = getElementValue('nome-aluno')
+    const escola = getElementValue('escola-aluno')
+    const responsavel = getElementValue('nome-responsavel')
+    const telefone = getElementValue('telefone-responsavel')
+    const embarque = getElementValue('local-embarque')
+    const endereco = getElementValue('endereco-aluno')
+    const valor = getElementValue('valor-mensalidade')
     
-    console.log('Dados:', { nome, escola, responsavel, telefone, embarque })
+    console.log('Dados coletados:', { nome, escola, responsavel, telefone, embarque })
     
     if (!nome || !escola || !responsavel) {
         alert('❌ Preencha pelo menos: Nome, Escola e Responsável!')
@@ -171,8 +214,8 @@ async function cadastrarAluno() {
         nome_responsavel: responsavel,
         telefone_responsavel: telefone,
         local_embarque: embarque,
-        endereco: document.getElementById('endereco-aluno')?.value?.trim() || '',
-        valor_mensalidade: parseFloat(document.getElementById('valor-mensalidade')?.value) || 150.00,
+        endereco: endereco,
+        valor_mensalidade: parseFloat(valor) || 150.00,
         status: 'ativo'
     }
     
@@ -183,30 +226,35 @@ async function cadastrarAluno() {
         
         if (error) {
             alert('❌ Erro ao cadastrar: ' + error.message)
-            console.error('Erro:', error)
+            console.error('Insert error:', error)
         } else {
             alert('✅ Aluno cadastrado com sucesso!')
             console.log('Aluno cadastrado:', data)
             
-            // Limpar campos
-            document.getElementById('nome-aluno').value = ''
-            document.getElementById('escola-aluno').value = ''
-            document.getElementById('nome-responsavel').value = ''
-            document.getElementById('telefone-responsavel').value = ''
-            document.getElementById('local-embarque').value = ''
-            
+            // Limpar formulário
+            limparFormularioAluno()
             listarAlunos()
             loadDashboard()
         }
     } catch (error) {
         alert('❌ Erro: ' + error.message)
-        console.error('Erro:', error)
+        console.error('Cadastro error:', error)
     }
 }
 
-// ===============================
-// LISTAR ALUNOS SIMPLIFICADO
-// ===============================
+function limparFormularioAluno() {
+    const campos = [
+        'nome-aluno', 'escola-aluno', 'nome-responsavel',
+        'telefone-responsavel', 'local-embarque', 'endereco-aluno',
+        'valor-mensalidade'
+    ]
+    
+    campos.forEach(campo => {
+        const elemento = document.getElementById(campo)
+        if (elemento) elemento.value = ''
+    })
+}
+
 async function listarAlunos() {
     console.log('Listando alunos...')
     
@@ -219,7 +267,7 @@ async function listarAlunos() {
         
         if (error) {
             alert('❌ Erro ao buscar alunos: ' + error.message)
-            console.error('Erro:', error)
+            console.error('List error:', error)
             return
         }
         
@@ -235,32 +283,71 @@ async function listarAlunos() {
             let html = ''
             data.forEach(aluno => {
                 html += `
-                    <div class="border rounded-lg p-4 mb-3 bg-blue-50">
-                        <h4 class="font-bold">${aluno.nome}</h4>
-                        <p class="text-gray-600">🏫 ${aluno.escola}</p>
-                        <p class="text-gray-600">👤 ${aluno.nome_responsavel || 'N/I'}</p>
-                        <p class="text-gray-600">📞 ${aluno.telefone_responsavel || 'N/I'}</p>
-                        <p class="text-green-600">💰 R$ ${parseFloat(aluno.valor_mensalidade || 0).toFixed(2)}</p>
-                        <div class="mt-2">
-                            <button onclick="excluirAluno(${aluno.id})" class="bg-red-500 text-white px-3 py-1 rounded text-sm">
-                                🗑️ Excluir
-                            </button>
+                    <div class="border rounded-lg p-4 mb-3 bg-blue-50 shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <h4 class="font-bold text-lg text-gray-800 mb-2">
+                                    <i class="fas fa-user-graduate mr-2 text-blue-500"></i>
+                                    ${aluno.nome}
+                                </h4>
+                                <div class="space-y-1 text-sm">
+                                    <p class="text-gray-600">
+                                        <i class="fas fa-school mr-2 text-green-500"></i>
+                                        <strong>Escola:</strong> ${aluno.escola}
+                                    </p>
+                                    ${aluno.nome_responsavel ? `
+                                        <p class="text-gray-600">
+                                            <i class="fas fa-user-friends mr-2 text-purple-500"></i>
+                                            <strong>Responsável:</strong> ${aluno.nome_responsavel}
+                                        </p>
+                                    ` : ''}
+                                    ${aluno.telefone_responsavel ? `
+                                        <p class="text-gray-600">
+                                            <i class="fas fa-phone mr-2 text-orange-500"></i>
+                                            <strong>Telefone:</strong> ${aluno.telefone_responsavel}
+                                        </p>
+                                    ` : ''}
+                                    ${aluno.local_embarque ? `
+                                        <p class="text-gray-600">
+                                            <i class="fas fa-map-marker-alt mr-2 text-red-500"></i>
+                                            <strong>Embarque:</strong> ${aluno.local_embarque}
+                                        </p>
+                                    ` : ''}
+                                    <p class="text-green-600 font-semibold">
+                                        <i class="fas fa-dollar-sign mr-2"></i>
+                                        <strong>Mensalidade:</strong> R$ ${parseFloat(aluno.valor_mensalidade || 0).toFixed(2)}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <button onclick="excluirAluno(${aluno.id})" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm shadow">
+                                    <i class="fas fa-trash mr-1"></i>Excluir
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `
             })
             listaDiv.innerHTML = html
         } else {
-            listaDiv.innerHTML = '<p class="text-center text-gray-500 py-4">Nenhum aluno cadastrado.</p>'
+            listaDiv.innerHTML = `
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-user-graduate text-4xl mb-4 text-gray-300"></i>
+                    <p class="text-lg">Nenhum aluno cadastrado ainda.</p>
+                    <p class="text-sm">Cadastre o primeiro aluno usando o formulário ao lado.</p>
+                </div>
+            `
         }
     } catch (error) {
         alert('❌ Erro: ' + error.message)
-        console.error('Erro:', error)
+        console.error('List error:', error)
     }
 }
 
 async function excluirAluno(id) {
-    if (!confirm('Excluir este aluno?')) return
+    if (!confirm('❌ Tem certeza que deseja excluir este aluno?')) {
+        return
+    }
     
     try {
         const { error } = await supabase
@@ -270,105 +357,218 @@ async function excluirAluno(id) {
         
         if (error) {
             alert('❌ Erro ao excluir: ' + error.message)
+            console.error('Delete error:', error)
         } else {
-            alert('✅ Aluno excluído!')
+            alert('✅ Aluno excluído com sucesso!')
             listarAlunos()
             loadDashboard()
         }
     } catch (error) {
         alert('❌ Erro: ' + error.message)
+        console.error('Delete error:', error)
     }
 }
 
-// ===============================
-// BUSCAR ALUNOS
-// ===============================
 async function buscarAlunos() {
-    const termo = document.getElementById('buscar-aluno')?.value?.toLowerCase()?.trim()
+    const termo = getElementValue('buscar-aluno')
     
     if (!termo) {
         listarAlunos()
         return
     }
     
-    console.log('Buscando:', termo)
-    // Por enquanto, usar a lista normal
-    listarAlunos()
+    console.log('Buscando por:', termo)
+    
+    try {
+        const { data, error } = await supabase
+            .from('alunos')
+            .select('*')
+            .eq('status', 'ativo')
+            .or(`nome.ilike.%${termo}%,escola.ilike.%${termo}%,nome_responsavel.ilike.%${termo}%`)
+        
+        if (error) {
+            console.error('Search error:', error)
+            listarAlunos()
+            return
+        }
+        
+        const listaDiv = document.getElementById('lista-alunos')
+        if (!listaDiv) return
+        
+        if (data && data.length > 0) {
+            let html = ''
+            data.forEach(aluno => {
+                html += `
+                    <div class="border rounded-lg p-4 mb-3 bg-yellow-50 border-yellow-300 shadow-sm">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <h4 class="font-bold text-lg text-gray-800 mb-2">
+                                    <i class="fas fa-user-graduate mr-2 text-blue-500"></i>
+                                    ${aluno.nome}
+                                    <span class="ml-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded">ENCONTRADO</span>
+                                </h4>
+                                <div class="space-y-1 text-sm">
+                                    <p class="text-gray-600">
+                                        <i class="fas fa-school mr-2 text-green-500"></i>
+                                        <strong>Escola:</strong> ${aluno.escola}
+                                    </p>
+                                    ${aluno.nome_responsavel ? `
+                                        <p class="text-gray-600">
+                                            <i class="fas fa-user-friends mr-2 text-purple-500"></i>
+                                            <strong>Responsável:</strong> ${aluno.nome_responsavel}
+                                        </p>
+                                    ` : ''}
+                                    ${aluno.telefone_responsavel ? `
+                                        <p class="text-gray-600">
+                                            <i class="fas fa-phone mr-2 text-orange-500"></i>
+                                            <strong>Telefone:</strong> ${aluno.telefone_responsavel}
+                                        </p>
+                                    ` : ''}
+                                    <p class="text-green-600 font-semibold">
+                                        <i class="fas fa-dollar-sign mr-2"></i>
+                                        <strong>Mensalidade:</strong> R$ ${parseFloat(aluno.valor_mensalidade || 0).toFixed(2)}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <button onclick="excluirAluno(${aluno.id})" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm shadow">
+                                    <i class="fas fa-trash mr-1"></i>Excluir
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `
+            })
+            listaDiv.innerHTML = html
+        } else {
+            listaDiv.innerHTML = `
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-search text-4xl mb-4 text-gray-300"></i>
+                    <p class="text-lg">Nenhum aluno encontrado para: "${termo}"</p>
+                </div>
+            `
+        }
+    } catch (error) {
+        console.error('Search error:', error)
+        listarAlunos()
+    }
 }
 
 // ===============================
-// FUNCÕES VAZIAS (para não dar erro)
+// FUNCIONALIDADES EM DESENVOLVIMENTO
 // ===============================
 function inicializarPresenca() {
     const hoje = new Date().toISOString().split('T')[0]
-    if (document.getElementById('data-presenca')) {
-        document.getElementById('data-presenca').value = hoje
+    const dataInput = document.getElementById('data-presenca')
+    if (dataInput) dataInput.value = hoje
+    
+    const listaPresenca = document.getElementById('lista-presenca')
+    if (listaPresenca) {
+        listaPresenca.innerHTML = `
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-clipboard-check text-4xl mb-4 text-gray-300"></i>
+                <p class="text-lg">Lista de Presença</p>
+                <p class="text-sm">Selecione uma data e turno, depois clique em "Carregar"</p>
+            </div>
+        `
     }
-    document.getElementById('lista-presenca').innerHTML = '<p class="text-center py-4">Selecione data e turno, depois clique em Carregar</p>'
 }
 
 function carregarListaPresenca() {
-    alert('🔧 Funcionalidade em desenvolvimento!')
+    alert('🔧 Lista de presença em desenvolvimento!')
 }
 
 function salvarPresenca() {
-    alert('🔧 Funcionalidade em desenvolvimento!')
+    alert('🔧 Salvar presença em desenvolvimento!')
 }
 
 async function listarMotoristas() {
-    document.getElementById('lista-motoristas').innerHTML = '<p class="text-center py-4">Funcionalidade em desenvolvimento</p>'
+    const listaDiv = document.getElementById('lista-motoristas')
+    if (listaDiv) {
+        listaDiv.innerHTML = `
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-user-tie text-4xl mb-4 text-gray-300"></i>
+                <p class="text-lg">Gestão de Motoristas</p>
+                <p class="text-sm">Funcionalidade em desenvolvimento</p>
+            </div>
+        `
+    }
 }
 
 async function cadastrarMotorista() {
-    alert('🔧 Funcionalidade em desenvolvimento!')
+    alert('🔧 Cadastro de motoristas em desenvolvimento!')
 }
 
 async function listarMensalidades() {
-    document.getElementById('lista-mensalidades').innerHTML = '<p class="text-center py-4">Funcionalidade em desenvolvimento</p>'
+    const listaDiv = document.getElementById('lista-mensalidades')
+    if (listaDiv) {
+        listaDiv.innerHTML = `
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-dollar-sign text-4xl mb-4 text-gray-300"></i>
+                <p class="text-lg">Gestão Financeira</p>
+                <p class="text-sm">Funcionalidade em desenvolvimento</p>
+            </div>
+        `
+    }
 }
 
 async function gerarMensalidades() {
-    alert('🔧 Funcionalidade em desenvolvimento!')
-}
-
-async function carregarAlunosOcorrencia() {
-    console.log('Carregando alunos para ocorrência...')
+    alert('🔧 Gerar mensalidades em desenvolvimento!')
 }
 
 async function listarOcorrencias() {
-    if (document.getElementById('lista-ocorrencias')) {
-        document.getElementById('lista-ocorrencias').innerHTML = '<p class="text-center py-4">Funcionalidade em desenvolvimento</p>'
+    const listaDiv = document.getElementById('lista-ocorrencias')
+    if (listaDiv) {
+        listaDiv.innerHTML = `
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-exclamation-triangle text-4xl mb-4 text-gray-300"></i>
+                <p class="text-lg">Gestão de Ocorrências</p>
+                <p class="text-sm">Funcionalidade em desenvolvimento</p>
+            </div>
+        `
     }
 }
 
 async function registrarOcorrencia() {
-    alert('🔧 Funcionalidade em desenvolvimento!')
+    alert('🔧 Registrar ocorrência em desenvolvimento!')
 }
 
 // ===============================
-// INICIALIZAÇÃO
+// INICIALIZAÇÃO SEGURA
 // ===============================
 document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Sistema iniciado!')
     
-    // Verificar elementos importantes
-    const elementos = ['email', 'password', 'login-section', 'dashboard']
-    elementos.forEach(id => {
-        const el = document.getElementById(id)
-        console.log(`Elemento ${id}:`, el ? '✅ Encontrado' : '❌ Não encontrado')
+    // Verificar elementos essenciais
+    const elementos = {
+        'email': document.getElementById('email'),
+        'password': document.getElementById('password'),
+        'login-section': document.getElementById('login-section'),
+        'dashboard': document.getElementById('dashboard')
+    }
+    
+    Object.entries(elementos).forEach(([nome, elemento]) => {
+        console.log(`${nome}:`, elemento ? '✅ OK' : '❌ MISSING')
     })
     
-    // Verificar usuário logado
+    // Verificar sessão existente
     supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
             console.log('Usuário já logado:', session.user.email)
             currentUser = session.user
-            document.getElementById('user-email').textContent = session.user.email
-            document.getElementById('login-section').classList.add('hidden')
-            document.getElementById('dashboard').classList.remove('hidden')
-            document.getElementById('user-info').classList.remove('hidden')
-            loadDashboard()
+            setElementText('user-email', session.user.email)
+            
+            const loginSection = document.getElementById('login-section')
+            const dashboard = document.getElementById('dashboard') 
+            const userInfo = document.getElementById('user-info')
+            
+            if (loginSection) loginSection.classList.add('hidden')
+            if (dashboard) dashboard.classList.remove('hidden')
+            if (userInfo) userInfo.classList.remove('hidden')
+            
             showSection('home')
         }
+    }).catch(error => {
+        console.error('Session check error:', error)
     })
 })
