@@ -1,10 +1,10 @@
 // Configuração do Supabase - VOCÊ VAI PREENCHER DEPOIS
-const supabaseUrl = 'COLE_SUA_URL_AQUI'
-const supabaseKey = 'COLE_SUA_CHAVE_AQUI'
+const supabaseUrl = https://qtvjrkgjmpbypmjhhkyg.supabase.co
+const supabaseKey = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0dmpya2dqbXBieXBtamhoa3lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2NzY0NDAsImV4cCI6MjA3NDI1MjQ0MH0.N7TJueloFMgrM-wsSi0h0nZlD1qy0QDR6pIQsJii2kI
 
 // Inicializar Supabase
 let supabase;
-if (supabaseUrl !== 'COLE_SUA_URL_AQUI') {
+if (supabaseUrl !== https://qtvjrkgjmpbypmjhhkyg.supabase.co) {
     supabase = window.supabase.createClient(supabaseUrl, supabaseKey)
     console.log('Supabase conectado!')
 } else {
